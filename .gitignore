@@ -2,4 +2,3 @@ venv
 cards
 __pycache__/
 *.egg-info/
-output_deck.pdf
