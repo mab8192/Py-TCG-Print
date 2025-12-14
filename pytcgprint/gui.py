@@ -3,6 +3,7 @@ from pathlib import Path
 from math import ceil
 from io import BytesIO
 from PIL import Image
+import os
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
     QLabel, QLineEdit, QPushButton, QFileDialog, QSpinBox, QDoubleSpinBox,
@@ -313,6 +314,10 @@ class MainWindow(QWidget):
         self.loading_label.setText("Loading preview...")
 
 def main():
+    # When packaged as exe, change to exe directory for relative paths
+    if getattr(sys, 'frozen', False):
+        os.chdir(os.path.dirname(sys.executable))
+    
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()

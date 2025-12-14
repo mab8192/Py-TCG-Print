@@ -28,7 +28,7 @@ def get_image_files(settings: Settings):
     input_path = Path(settings.input_dir)
     if not input_path.exists():
         print(f"Error: Input directory '{settings.input_dir}' does not exist.")
-        sys.exit(1)
+        return []
 
     valid_files = []
     # Sort files to ensure page order is consistent
@@ -45,7 +45,7 @@ def get_image_files(settings: Settings):
             
     if not valid_files:
         print("Error: No valid images found in input directory.")
-        sys.exit(1)
+        return []
 
     return valid_files
 
@@ -73,8 +73,7 @@ def calculate_layout(settings: Settings):
     if cols <= 0:
         cols = floor(avail_w / card_w)
         if cols < 1:
-            print("Error: Page too narrow for even one card + margins!")
-            sys.exit(1)
+            raise ValueError("Page too narrow for even one card + margins!")
 
     rows = settings.rows
     if rows <= 0:
@@ -119,8 +118,7 @@ def calculate_layout(settings: Settings):
     
     # Verify vertical fit one last time
     if total_grid_h > page_h:
-        print(f"Error: {rows} rows is too tall for this page height.")
-        sys.exit(1)
+        raise ValueError(f"{rows} rows is too tall for this page height.")
 
     # Center Vertically
     margin_y = (page_h - total_grid_h) // 2
@@ -170,40 +168,44 @@ def create_page(image_paths, layout):
     return page
 
 def pytcgprint(settings: Settings):
-    image_files = get_image_files(settings)
-    total_images = len(image_files)
-    
-    layout = calculate_layout(settings)
-    
-    print(f"Found {total_images} images.")
-    print(f"Auto-Computed Layout: {layout['cols']} Cols x {layout['rows']} Rows")
-    print(f"Card Scale: {int(settings.scale*100)}% | Gap: {layout['gap']} px")
-    
-    pages = []
-    cards_per_page = layout['cards_per_page']
-    total_pages = ceil(total_images / cards_per_page)
-    
-    for i in range(total_pages):
-        start = i * cards_per_page
-        end = start + cards_per_page
-        batch = image_files[start:end]
+    try:
+        image_files = get_image_files(settings)
+        total_images = len(image_files)
         
-        print(f"Generating page {i+1}/{total_pages}...")
-        page_img = create_page(batch, layout)
+        layout = calculate_layout(settings)
         
-        pages.append(page_img)
+        print(f"Found {total_images} images.")
+        print(f"Auto-Computed Layout: {layout['cols']} Cols x {layout['rows']} Rows")
+        print(f"Card Scale: {int(settings.scale*100)}% | Gap: {layout['gap']} px")
         
-    if pages:
-        print(f"Saving output PDF to '{settings.output_file}'...")
-        pages[0].save(
-            settings.output_file,
-            save_all=True,
-            append_images=pages[1:],
-            resolution=settings.dpi,
-            quality=95
-        )
-        print("Done.")
-    else:
-        print("No pages were created.")
+        pages = []
+        cards_per_page = layout['cards_per_page']
+        total_pages = ceil(total_images / cards_per_page)
+        
+        for i in range(total_pages):
+            start = i * cards_per_page
+            end = start + cards_per_page
+            batch = image_files[start:end]
+            
+            print(f"Generating page {i+1}/{total_pages}...")
+            page_img = create_page(batch, layout)
+            
+            pages.append(page_img)
+            
+        if pages:
+            print(f"Saving output PDF to '{settings.output_file}'...")
+            pages[0].save(
+                settings.output_file,
+                save_all=True,
+                append_images=pages[1:],
+                resolution=settings.dpi,
+                quality=95
+            )
+            print("Done.")
+        else:
+            print("No pages were created.")
 
-    return pages
+        return pages
+    except ValueError as e:
+        print(f"Error: {e}")
+        return []
