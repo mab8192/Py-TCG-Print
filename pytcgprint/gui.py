@@ -4,6 +4,7 @@ from math import ceil
 from io import BytesIO
 from PIL import Image
 import os
+import json
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
     QLabel, QLineEdit, QPushButton, QFileDialog, QSpinBox, QDoubleSpinBox,
@@ -13,6 +14,39 @@ from PyQt6.QtGui import QPixmap, QIcon, QImage, QDesktopServices
 from PyQt6.QtCore import QThread, pyqtSignal, QSize, QUrl
 
 from pytcgprint.core import Settings, get_image_files, calculate_layout, create_page
+
+def get_config_path():
+    return Path.home() / ".pytcgprint.json"
+
+def save_settings(settings: Settings):
+    config = {
+        "input_dir": settings.input_dir,
+        "output_file": settings.output_file,
+        "page_width": settings.page_width,
+        "page_height": settings.page_height,
+        "card_width": settings.card_width,
+        "card_height": settings.card_height,
+        "margin": settings.margin,
+        "scale": settings.scale,
+        "rows": settings.rows,
+        "cols": settings.cols,
+        "dpi": settings.dpi
+    }
+    try:
+        with open(get_config_path(), 'w') as f:
+            json.dump(config, f, indent=2)
+    except Exception as e:
+        print(f"Warning: Could not save config: {e}")
+
+def load_settings():
+    config_path = get_config_path()
+    if config_path.exists():
+        try:
+            with open(config_path, 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Warning: Could not load config: {e}")
+    return None
 
 class GenerateThread(QThread):
     progress = pyqtSignal(int)
@@ -207,7 +241,20 @@ class MainWindow(QWidget):
 
         self.setLayout(layout)
 
-        self.load_preview()
+        # Load saved settings
+        config = load_settings()
+        if config:
+            self.input_edit.setText(config.get("input_dir", "cards"))
+            self.output_edit.setText(config.get("output_file", "output_deck.pdf"))
+            self.page_width_edit.setValue(config.get("page_width", 8.5))
+            self.page_height_edit.setValue(config.get("page_height", 11.0))
+            self.card_width_edit.setValue(config.get("card_width", 2.5))
+            self.card_height_edit.setValue(config.get("card_height", 3.5))
+            self.margin_edit.setValue(config.get("margin", 0.5))
+            self.scale_edit.setValue(config.get("scale", 0.98))
+            self.rows_edit.setValue(config.get("rows", 0))
+            self.cols_edit.setValue(config.get("cols", 0))
+            self.dpi_edit.setValue(config.get("dpi", 300))
 
         self.load_preview()
 
@@ -236,6 +283,8 @@ class MainWindow(QWidget):
                 cols=self.cols_edit.value(),
                 dpi=self.dpi_edit.value()
             )
+
+            save_settings(settings)
 
             self.progress_bar.setVisible(True)
             self.progress_bar.setValue(0)
