@@ -6,12 +6,12 @@ setup(
     packages=find_packages(),
     install_requires=[
         "pillow",
+        "PyQt6",
     ],
     entry_points={
         'console_scripts': [
-            # This creates a terminal command 'deck-builder' 
-            # that runs the main() function in cli.py
             'pytcgprint=pytcgprint.cli:main',
+            'pytcggui=pytcgprint.gui:main',
         ],
     },
     python_requires='>=3.6',
